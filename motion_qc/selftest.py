@@ -97,20 +97,34 @@ def run_selftest(keep: bool = False) -> int:
     # ── 3. 已知好样本：必须全绿 ─────────────────────────────────
     _emit("")
     _emit("已知好样本（必须全绿）")
-    for name in ("minimal-title.html", "wide-composition.html", "subpixel-inside.html"):
+    for name in ("minimal-title.html", "wide-composition.html", "subpixel-inside.html",
+                 "font-fallback.html"):
         p = SAMPLES / "good" / name
         s, o = smoke.run(p, cfg), overflow.run(p, cfg)
+        # 只按严重度判：WARN 是「结论要打折」，不是「判错了」。
+        # 字体取不到那一类样本就是 WARN，它仍然是好样本。
+        bad = [f for res in (s, o) for f in res.findings if f.severity in ("fail", "error")]
         detail = []
-        if s.findings:
-            detail.append("smoke: %s" % "; ".join(f.message for f in s.findings))
-        if o.findings:
-            detail.append("overflow: %s" % "; ".join(f.message for f in o.findings))
+        if bad:
+            detail.extend(f.message for f in bad)
         if node:
             j = jscheck.run(p, cfg)
             if j.status not in ("pass", "skip"):
-                detail.append("jscheck: %s" % "; ".join(f.message for f in j.findings))
-        r.check("好样本不误报：%s" % name, not detail, " | ".join(detail) or
-                "时长 %ss · 采样 %s" % (s.info.get("duration"), s.info.get("visiblePerSample")))
+                detail.extend(f.message for f in j.findings)
+        warns = sorted({f.code for res in (s, o) for f in res.findings if f.severity == "warn"})
+        r.check("好样本不误报：%s" % name, not detail,
+                " | ".join(detail) or "时长 %ss · 采样 %s%s"
+                % (s.info.get("duration"), s.info.get("visiblePerSample"),
+                   (" · 警告 %s" % warns) if warns else ""))
+
+    # 字体取不到要能被机器读到，但**不该**在没牵扯到出框结论时报警告：
+    # 本地开发里 98 个组件有 97 个字体取不到，无条件报警等于没报警。
+    fo = overflow.run(SAMPLES / "good" / "font-fallback.html", cfg)
+    r.check("字体取不到但没牵扯出框 → 不报警告，字体情况仍进 info",
+            fo.status == "pass" and "OF_FONT_NOT_LOADED" not in _codes(fo)
+            and fo.info.get("fontsNotLoaded"),
+            "状态 %s · 发现 %s · info 字体 %d"
+            % (fo.status, sorted(_codes(fo)) or "无", len(fo.info.get("fontsNotLoaded") or [])))
 
     # ── 4. 已知坏样本：每种缺陷都必须真的响 ─────────────────────
     _emit("")
@@ -125,6 +139,8 @@ def run_selftest(keep: bool = False) -> int:
         ("no-timeline.html", smoke, "SMOKE_NO_TIMELINE", "没注册时间轴必须报"),
         ("static-frame.html", smoke, "SMOKE_STATIC", "静止片必须报出"),
         ("too-short.html", smoke, "SMOKE_TOO_SHORT", "时长过短必须报出"),
+        ("font-caveat.html", overflow, "OF_OUT_OF_FRAME", "文字出框必须报"),
+        ("font-caveat.html", overflow, "OF_FONT_NOT_LOADED", "文字出框 + 字体取不到必须附带提示"),
     )
     cache: dict = {}
     for name, mod, code, label in expectations:

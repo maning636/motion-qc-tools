@@ -47,6 +47,7 @@ def _probe_source(cfg: Config, src_uri: str, viewport) -> str:
         "visibleSamples": cfg.visible_samples,
         "frameSamples": cfg.frame_samples,
         "loadTimeoutMs": cfg.load_timeout_ms,
+        "fontTimeoutMs": cfg.font_timeout_ms,
         "settleMs": cfg.settle_ms,
     }
     return raw.replace("__SRC__", json.dumps(src_uri)).replace("__CFG__", json.dumps(conf))

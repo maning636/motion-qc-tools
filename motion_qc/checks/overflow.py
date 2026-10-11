@@ -29,7 +29,7 @@ from pathlib import Path
 
 from ..browser import BrowserError
 from ..config import Config
-from .base import ERROR, PASS, CheckResult, Finding
+from .base import ERROR, PASS, WARN, CheckResult, Finding
 from .runtime import probe_cached
 
 CHECK_ID = "overflow"
@@ -101,7 +101,42 @@ def run(target: Path, cfg: Config) -> CheckResult:
 
     if res.status == PASS:
         res.info["headline"] = "落定期 %d 个采样点全部在框内" % cfg.settle_samples
+    _font_note(res, data)
     return res
+
+
+def _font_note(res: CheckResult, data: dict) -> None:
+    """字体没加载上 → 文字宽度是兜底字体的宽度，这类结论要打折。
+
+    只在**确实有带文字的元素被判出框**时才升成警告。字体取不到在本地开发里
+    是常态（组件写的是站点绝对路径 /fonts/...），98 个文件里 97 个会中招——
+    无条件报警等于没报警，看报告的人会直接把这一行划过去。
+    关键程度取决于它影响了哪条结论，所以按结论触发。
+
+    无论触不触发，`fontsNotLoaded` 都进 info：机器能读到，人需要时才用。
+    """
+    bad = data.get("fonts") or []
+    if not bad:
+        return
+    res.info["fontsNotLoaded"] = bad
+    text_hits = [
+        f for f in res.findings
+        if f.code == "OF_OUT_OF_FRAME" and (f.detail or {}).get("text")
+    ]
+    if not text_hits:
+        return
+    res.add(
+        Finding(
+            "OF_FONT_NOT_LOADED",
+            "有 %d 个 @font-face 没加载上（%s），且有 %d 条出框结论涉及文字——"
+            "文字宽度是按兜底字体的量，同一段字能差好几个像素，这几条请复核。"
+            "常见原因是组件引用了站点绝对路径字体（file:// 下取不到）。"
+            % (len(bad), "、".join(sorted({str(f.get("family")) for f in bad})),
+               len(text_hits)),
+            WARN,
+            detail={"fonts": bad, "affectedFindings": [f.message for f in text_hits]},
+        )
+    )
 
 
 def _worst(rec: dict) -> int:

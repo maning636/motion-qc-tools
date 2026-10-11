@@ -53,7 +53,6 @@
   });
   frame.src = SRC;
   await loaded;
-  await sleep(CFG.settleMs);
 
   const win = frame.contentWindow;
   const doc = frame.contentDocument;
@@ -61,6 +60,37 @@
     pushErr('无法取得 iframe 内容（文件打不开，或不是 HTML）');
     return out;
   }
+
+  /* 字体必须等完再量，而且没加载上这件事必须报出去。
+     文字的宽度是出框判定里最吃重的一个量，而 @font-face 是异步加载的：
+     兜底字体的字宽和原字体能差好几个像素——实测有一个组件，字体到位时标题
+     正好 480px（贴边合规），字体加载失败退到系统字体时量到 489–495px（判成出框 4px）。
+     这不是判据的问题，是**量到的不是同一个东西**。所以两件事都要做：
+       等 document.fonts.ready（跨域字体可能永远不 resolve，套超时兜底）
+       把没加载上的字体列出来，让看报告的人知道文字类结论要打折
+     别把这段挪到 doc 取到之前——try/catch 会把那个 ReferenceError 一起吞掉，
+     字体检查就静悄悄地一个都不报了。 */
+  try {
+    if (doc.fonts && doc.fonts.ready) {
+      await Promise.race([doc.fonts.ready, sleep(CFG.fontTimeoutMs)]);
+    }
+  } catch (e) { /* 量不到字体就按现状量，不因此放弃整次探测 */ }
+
+  out.fonts = [];
+  try {
+    if (doc.fonts) {
+      /* FontFaceSet 是 Set 形态的：没有 length、没有下标，只有迭代器和 forEach。
+         用 Array.prototype.forEach.call 去遍历它会静悄悄地一个都不跑。 */
+      for (const face of doc.fonts) {
+        if (face.status !== 'loaded') {
+          out.fonts.push({ family: face.family || '(未命名)', status: face.status, weight: face.weight });
+        }
+      }
+    }
+  } catch (e) { /* 拿不到就当没有 */ }
+
+  await sleep(CFG.settleMs);
+
   /* 必须挂 iframe 内部的监听：组件是独立文档，异常报在它自己的 window 上，
      挂父页面听不见。这是原始工具踩过的坑，别去掉。 */
   win.addEventListener('error', (e) => pushErr('运行时异常: ' + (e.message || e.type)));

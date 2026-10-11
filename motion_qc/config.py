@@ -83,6 +83,8 @@ class Config:
     viewport: tuple | None = None
     load_timeout_ms: int = 6000
     settle_ms: int = 500
+    #: 等字体加载完的上限。超时照常量，但「文字出框」那部分结论会打折。
+    font_timeout_ms: int = 4000
     virtual_time_budget: int = 20000
     subprocess_timeout: int = 120
 

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知好样本 · 字体取不到（结论要打折，但不算不合格）</title>
+<style>
+  /* 故意指向一个不存在的字体文件。组件在 file:// 下打开时经常这样：
+     站点里写的是绝对路径 /fonts/...，本地根本没有。
+     浏览器会静悄悄地退到兜底字体，字宽变几个像素，
+     「文字出框」这一整类结论就不能当真了——所以工具要报出来。 */
+  @font-face {
+    font-family: 'SampleMissing';
+    src: url('./_no-such-font-file.ttf') format('truetype');
+    font-weight: 400;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  .head  { position: absolute; left: 24px; top: 100px; width: 400px; height: 50px;
+           font-family: 'SampleMissing', sans-serif; font-size: 30px; color: #F4EFE7; }
+  .label { position: absolute; left: 24px; top: 24px; font-size: 12px; color: #F4EFE7; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="label">字体取不到样本</div>
+  <div class="head">兜底字体也算数</div>
+</div>
+<script>
+window.__timelines = { main: (function () {
+  var tracks = [], dur = 0;
+  return {
+    add: function (start, len, apply) {
+      tracks.push({ s: start, d: len, f: apply });
+      if (start + len > dur) dur = start + len;
+    },
+    duration: function () { return dur; },
+    time: function (t) {
+      for (var i = 0; i < tracks.length; i++) {
+        var k = tracks[i];
+        var p = k.d <= 0 ? 1 : Math.min(1, Math.max(0, (t - k.s) / k.d));
+        k.f(p);
+      }
+    },
+  };
+})() };
+(function () {
+  var tl = window.__timelines.main;
+  var el = document.querySelector('.head');
+  el.style.opacity = '0';
+  tl.add(0.1, 0.6, function (p) {
+    el.style.opacity = p;
+    el.style.transform = 'translateX(' + ((1 - p) * 12).toFixed(2) + 'px)';
+  });
+  tl.add(1.5, 0.001, function () {});
+  tl.time(0);
+})();
+</script>
+</body>
+</html>
