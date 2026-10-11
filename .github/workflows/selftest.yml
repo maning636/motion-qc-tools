@@ -1,0 +1,63 @@
+name: selftest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  motion-qc:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # ubuntu-latest 的 runner 镜像自带 Chrome；两个桌面系统用官方 action 拉。
+      - name: 拉 Chrome（macOS）
+        if: runner.os == 'macOS'
+        run: brew install --cask google-chrome
+
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+        if: runner.os != 'Linux'
+
+      - run: pip install -e .
+
+      # 样本报错就红：这层就是拿来证明判定口径没被改坏的。
+      - name: 好样本必须全绿
+        run: motion-qc check samples/good/ -v
+
+      # 坏样本必须被拦下。预期退出码 1，所以先看输出再判退出码——
+      # 直接跑会红，那正是我们要的，但要先确认红的原因是「拦下了」而不是「崩了」。
+      - name: 坏样本必须被拦下
+        run: |
+          set +e
+          motion-qc check samples/bad/ -v
+          rc=$?
+          set -e
+          if [ "$rc" -ne 1 ]; then
+            echo "::error::坏样本的预期退出码是 1（有不合格项），实际是 $rc"
+            exit 1
+          fi
+
+      - name: 好样本 JSON 必须 ok=true
+        run: |
+          motion-qc check samples/good/ -q --json good.json
+          python -c "
+          import json,sys
+          d=json.load(open('good.json',encoding='utf-8'))
+          assert d['summary']['ok'], d['summary']
+          print('好样本全过：', d['summary'])
+          "
+
+      - name: 工具自测
+        run: motion-qc selftest

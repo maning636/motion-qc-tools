@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知坏样本 · 有字但宽高为 0</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  .ok    { position: absolute; left: 24px; top: 40px; font-size: 14px; color: #F4EFE7; }
+  /* 宽高都是 0 —— 这一条内容等于根本没画出来。
+     DOM 查询能查到它、textContent 也有值，只有量矩形才发现问题。 */
+  .gone  { position: absolute; left: 24px; top: 120px; width: 0; height: 0;
+           overflow: hidden; font-size: 20px; color: #FF6B35; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="ok">正常元素</div>
+  <div class="gone">这条文字永远不会被看见</div>
+</div>
+<script>
+window.__timelines = { main: (function () {
+  var tracks = [], dur = 0;
+  return {
+    add: function (start, len, apply) {
+      tracks.push({ s: start, d: len, f: apply });
+      if (start + len > dur) dur = start + len;
+    },
+    duration: function () { return dur; },
+    time: function (t) {
+      for (var i = 0; i < tracks.length; i++) {
+        var k = tracks[i];
+        var p = k.d <= 0 ? 1 : Math.min(1, Math.max(0, (t - k.s) / k.d));
+        k.f(p);
+      }
+    },
+  };
+})() };
+(function () {
+  var tl = window.__timelines.main;
+  var el = document.querySelector('.gone');
+  el.style.opacity = '0';
+  tl.add(0.1, 0.5, function (p) { el.style.opacity = p; });
+  tl.add(1.6, 0.001, function () {});
+  tl.time(0);
+})();
+</script>
+</body>
+</html>

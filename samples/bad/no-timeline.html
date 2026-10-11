@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知坏样本 · 根本没注册时间轴</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  .label { position: absolute; left: 20px; top: 24px; font-size: 12px; color: #F4EFE7; }
+  .card  { position: absolute; left: 40px; top: 100px; width: 300px; height: 60px;
+           background: #1B2420; color: #F4EFE7; font-size: 18px; line-height: 60px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="label">无时间轴样本</div>
+  <div class="card">页面看着有东西，但没有可编排的时间轴</div>
+</div>
+<script>
+/* 语法完全合法，运行期也不报错，DOM 读数一切正常——
+   但窗口站和所有编排工具都拿它没办法：没有 window.__timelines.main。
+   「时间轴没起来」的组件照样会被批量渲帧记成成功，因为它照样产出了一个文件。 */
+(function () {
+  var el = document.querySelector('.card');
+  el.style.opacity = '0';
+  var start = null;
+  function step(ts) {
+    if (start === null) start = ts;
+    var p = Math.min(1, (ts - start) / 1200);
+    el.style.opacity = p;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

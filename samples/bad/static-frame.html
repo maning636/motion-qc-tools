@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知坏样本 · 时间轴注册了但画面几乎不动</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  .label { position: absolute; left: 20px; top: 24px; font-size: 12px; color: #F4EFE7; }
+  .card  { position: absolute; left: 40px; top: 100px; width: 300px; height: 80px;
+           background: #1B2420; color: #F4EFE7; font-size: 18px; line-height: 80px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="label">静止片样本</div>
+  <div class="card">时长合格，画面不动</div>
+</div>
+<script>
+window.__timelines = { main: (function () {
+  var tracks = [], dur = 0;
+  return {
+    add: function (start, len, apply) {
+      tracks.push({ s: start, d: len, f: apply });
+      if (start + len > dur) dur = start + len;
+    },
+    duration: function () { return dur; },
+    time: function (t) {
+      for (var i = 0; i < tracks.length; i++) {
+        var k = tracks[i];
+        var p = k.d <= 0 ? 1 : Math.min(1, Math.max(0, (t - k.s) / k.d));
+        k.f(p);
+      }
+    },
+  };
+})() };
+(function () {
+  var tl = window.__timelines.main;
+  /* 时长铺到 3.2 秒，看起来完全正常——但每条轨道都不改任何样式。
+     这正是批量渲帧记成「✓」而肉眼看出一张近乎静止的片子的那种情况：
+     文件产出了，规格都对，就是没有动效。 */
+  tl.add(0, 3.0, function () {});
+  tl.add(3.1, 0.001, function () {});
+  tl.time(0);
+})();
+</script>
+</body>
+</html>

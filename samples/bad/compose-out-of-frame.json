@@ -1,0 +1,39 @@
+{
+  "version": "compose/2",
+  "title": "已知坏样本 · 运动甩出画布 + 契约四错 + 重叠 + 裸底",
+  "canvas": { "width": 1920, "height": 1080 },
+  "duration": 14,
+  "layers": [
+    {
+      "name": "右移出画的卡片",
+      "templateId": "demo-card",
+      "type": "template",
+      "position": "cc",
+      "x": 22,
+      "y": 0,
+      "scale": 100,
+      "start": 0,
+      "end": 4.0,
+      "motion": { "type": "line", "dx": 1700, "dy": 0, "secs": 4.0, "ease": "linear" }
+    },
+    {
+      "name": "锚点写错且缩放越界的层",      "templateId": "demo-bad",
+      "type": "template",
+      "position": "middle",
+      "x": 0,
+      "y": 0,
+      "scale": 400,
+      "start": 8.0,
+      "end": 30.0
+    },
+    {
+      "name": "缺 templateId 的层",
+      "position": "bc",
+      "x": 0,
+      "y": 0,
+      "scale": 100,
+      "start": 12.0,
+      "end": 30.0
+    }
+  ]
+}

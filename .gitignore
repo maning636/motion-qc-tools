@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# 自测和检查留下的中间产物
+report.json
+*.report.json
+.tmp/
+motion-qc-cache/

@@ -1,0 +1,32 @@
+{
+  "version": "compose/2",
+  "title": "已知好样本 · 单层居中",
+  "canvas": { "width": 1920, "height": 1080 },
+  "duration": 6,
+  "layers": [
+    {
+      "name": "开场标题",
+      "templateId": "demo-title",
+      "type": "template",
+      "position": "cc",
+      "x": 0,
+      "y": 0,
+      "scale": 100,
+      "start": 0,
+      "end": 3.2,
+      "motion": { "type": "line", "dx": -80, "dy": 0, "secs": 0.8, "ease": "out" }
+    },
+    {
+      "name": "收尾尾板",
+      "templateId": "demo-endcard",
+      "type": "template",
+      "position": "cc",
+      "x": 0,
+      "y": 0,
+      "scale": 90,
+      "start": 3.2,
+      "end": 6.0,
+      "motion": { "type": "offset", "dx": 0, "dy": 0, "secs": 0.6, "ease": "linear" }
+    }
+  ]
+}

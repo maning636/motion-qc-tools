@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知坏样本 · 内联脚本解析期就死了</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  .label { position: absolute; left: 20px; top: 24px; font-size: 12px; color: #F4EFE7; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="label">解析失败样本</div>
+</div>
+<script>
+/* 这一行是故意写坏的。后果不是「某一行没跑」，
+   而是**整个 <script> 块都不执行**——下面那行时间轴注册压根没机会跑到。
+
+   现实里这类 bug 极难定位：DOM 查询一切正常，
+   运行时日志一条异常都没有（解析错误不落 error 事件流，本仓库实测过），
+   唯一的表现是「时间轴没注册」。 */
+const broken = ;
+
+window.__timelines = { main: { duration: function () { return 2; }, time: function () {} } };
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知好样本 · 亚像素越界 0.2px（必须放过）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+  /* 右边越界 0.2px：比 0.5px 容差小，必须放过。
+     容差要是塌成 0，浮点噪声会把整个扫描器变成一盏红灯——
+     而一盏永远红的灯和没有灯是一回事。 */
+  .sliver{ position: absolute; left: 470.2px; top: 120px; width: 10px; height: 30px; background: #4ADE80; }
+  .label { position: absolute; left: 20px; top: 24px; font-size: 12px; color: #F4EFE7; }
+  .note  { position: absolute; left: 20px; top: 200px; width: 300px; height: 20px;
+           font-size: 13px; color: rgba(244,239,231,.6); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="sliver"></div>
+  <div class="label">亚像素样本</div>
+  <p class="note">右边缘越界 0.2px，小于 0.5px 容差，不该被报成出框。</p>
+</div>
+<script>
+window.__timelines = { main: (function () {
+  var tracks = [], dur = 0;
+  return {
+    add: function (start, len, apply) {
+      tracks.push({ s: start, d: len, f: apply });
+      if (start + len > dur) dur = start + len;
+    },
+    duration: function () { return dur; },
+    time: function (t) {
+      for (var i = 0; i < tracks.length; i++) {
+        var k = tracks[i];
+        var p = k.d <= 0 ? 1 : Math.min(1, Math.max(0, (t - k.s) / k.d));
+        k.f(p);
+      }
+    },
+  };
+})() };
+(function () {
+  var tl = window.__timelines.main;
+  var el = document.querySelector('.sliver');
+  el.style.opacity = '0';
+  tl.add(0.1, 0.5, function (p) { el.style.opacity = p; });
+  tl.add(0.8, 0.9, function (p) { el.style.transform = 'scaleY(' + (0.4 + 0.6 * p).toFixed(3) + ')'; });
+  tl.add(1.8, 0.001, function () {});
+  tl.time(0);
+})();
+</script>
+</body>
+</html>

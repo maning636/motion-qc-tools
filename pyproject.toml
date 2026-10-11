@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "motion-qc-tools"
+version = "0.1.0"
+description = "AI 动效验收工具：把你生成的动效 HTML 喂进来，告诉你哪里不行（出框 / 运行时错误 / JS 语法）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+keywords = ["motion", "animation", "qc", "qa", "headless", "chrome", "gsap", "html"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+# Node.js 是硬依赖但装不进 pip，只能由使用者自己装。
+# 这一组只是把「怎么装」写进元数据，方便 CI 里一次性装齐。
+ci = []
+
+[project.scripts]
+motion-qc = "motion_qc.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/maning636/motion-qc-tools"
+Issues = "https://github.com/maning636/motion-qc-tools/issues"
+
+[tool.setuptools]
+packages = ["motion_qc", "motion_qc.checks"]
+
+[tool.setuptools.package-data]
+motion_qc = ["assets/*.js"]

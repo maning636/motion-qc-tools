@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知好样本 · 极简标题卡（480×270）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+
+  .plate   { position: absolute; left: 0;   top: 0;   width: 480px; height: 270px; background: #12100E; }
+  .kicker  { position: absolute; left: 32px; top: 30px; font-size: 11px; letter-spacing: .18em; color: #FF6B35; }
+  .headline{ position: absolute; left: 32px; top: 96px; width: 380px; height: 64px; font-size: 46px; line-height: 1.1; color: #F4EFE7; }
+  .sub     { position: absolute; left: 32px; top: 176px; width: 340px; height: 20px; font-size: 14px; color: rgba(244,239,231,.62); }
+  .bar     { position: absolute; left: 32px; top: 222px; width: 120px; height: 4px; background: #FF6B35; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="plate"></div>
+  <div class="kicker">CASE 01</div>
+  <h1 class="headline">注意力</h1>
+  <p class="sub">这个时代真正稀缺的东西</p>
+  <div class="bar"></div>
+</div>
+<script>
+/* 一个够用的时间轴替身。真实项目用 GSAP，这里刻意不引依赖：
+   自测样本必须能在任何一台装了浏览器的机器上跑起来，
+   装依赖之前它就该是绿的。接口只有 time() / duration()，
+   和 motion-qc 探针真正用到的一致。 */
+window.__timelines = { main: (function () {
+  var tracks = [], dur = 0;
+  return {
+    add: function (start, len, apply) {
+      tracks.push({ s: start, d: len, f: apply });
+      if (start + len > dur) dur = start + len;
+    },
+    duration: function () { return dur; },
+    time: function (t) {
+      for (var i = 0; i < tracks.length; i++) {
+        var k = tracks[i];
+        var p = k.d <= 0 ? 1 : Math.min(1, Math.max(0, (t - k.s) / k.d));
+        k.f(p);
+      }
+    },
+  };
+})() };
+
+(function () {
+  var tl = window.__timelines.main;
+  function q(sel) { return document.querySelector(sel); }
+  function fade(sel, start, len) {
+    var el = q(sel);
+    tl.add(start, len, function (p) { el.style.opacity = p; });
+  }
+  function rise(sel, start, len, dy) {
+    var el = q(sel);
+    tl.add(start, len, function (p) {
+      el.style.opacity = p;
+      el.style.transform = 'translateY(' + ((1 - p) * dy).toFixed(2) + 'px)';
+    });
+  }
+  fade('.plate', 0, 0.4);
+  rise('.kicker', 0.2, 0.6, 8);
+  rise('.headline', 0.3, 0.8, 14);
+  rise('.sub', 0.6, 0.7, 10);
+  q('.bar').style.width = '0px';
+  tl.add(1.4, 1.0, function (p) { q('.bar').style.width = (120 * p).toFixed(1) + 'px'; });
+  tl.add(2.5, 0.001, function () {});
+  tl.time(0);
+})();
+</script>
+</body>
+</html>
