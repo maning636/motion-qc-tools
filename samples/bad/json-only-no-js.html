@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=480, height=270" />
+<title>已知坏样本 · 只有数据块，一段 JS 都没有（不能报「通过」）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 480px; height: 270px; overflow: hidden; background: transparent; }
+  #stage { position: relative; width: 480px; height: 270px; overflow: hidden; }
+  .plate { position: absolute; left: 0; top: 0; width: 480px; height: 270px; background: #0E1311; }
+</style>
+</head>
+<body>
+<div id="stage"><div class="plate"></div></div>
+<script type="application/json" data-hyperframes-variables>
+{ "headline": { "type": "string", "label": "主标题", "default": "只有数据，没有脚本" } }
+</script>
+</body>
+</html>

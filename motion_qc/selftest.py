@@ -98,7 +98,7 @@ def run_selftest(keep: bool = False) -> int:
     _emit("")
     _emit("已知好样本（必须全绿）")
     for name in ("minimal-title.html", "wide-composition.html", "subpixel-inside.html",
-                 "font-fallback.html"):
+                 "font-fallback.html", "json-data-block.html"):
         p = SAMPLES / "good" / name
         s, o = smoke.run(p, cfg), overflow.run(p, cfg)
         # 只按严重度判：WARN 是「结论要打折」，不是「判错了」。
@@ -172,8 +172,70 @@ def run_selftest(keep: bool = False) -> int:
             "OF_OUT_OF_FRAME" not in o_loose,
             "2px 容差下报出 %s" % (sorted(o_loose) or "静"))
 
+    _script_type_assertions(r, cfg, node)
     _return(r)
     return 0 if not r.failed else 1
+
+
+def _script_type_assertions(r: _Result, cfg, node) -> None:
+    """script type 白名单：数据块不许误报，真语法错不许放过。
+
+    这一组是从一个真实误报长出来的：compose/2 外部图层普遍用
+    `<script type="application/json" data-hyperframes-variables>` 做变量自描述，
+    那一版把所有 <script> 都抽出来送 node --check，于是每一个合法的外部图层
+    都被判成语法错。修的方向是白名单——但白名单最容易出的事故是**修过头**，
+    把真阳性一起修没了。所以数据块和真语法错各钉一条。
+    """
+    from .checks import jscheck as JC
+
+    _emit("")
+    _emit("script type 白名单（数据块不误报 / 真语法错不放过）")
+
+    # 抽取本身：只有 src 的不进名单；数据块进名单但不是 parseable。
+    html = ('<script src="a.js"></script>'
+            '<script type="application/json">{"a":1}</script>'
+            '<script>var a=1;</script>'
+            '<script type="module">export const a = 1;</script>'
+            '<script type="TEXT/JAVASCRIPT">var b=2;</script>')
+    kinds = [(b["type"], JC.classify(b)[0]) for b in JC.extract_blocks(html)]
+    r.check("抽取：外部脚本不进名单，type 大小写不敏感",
+            [k[0] for k in kinds] == ["application/json", "", "module", "text/javascript"],
+            str(kinds))
+    r.check("分类：数据块不查 / JS 查 / module 存成 .mjs",
+            JC.classify({"type": "application/json"})[0] == "data"
+            and JC.classify({"type": ""}) == ("parse", "js")
+            and JC.classify({"type": "module"}) == ("parse", "mjs")
+            and JC.classify({"type": "importmap"})[0] == "data"
+            and JC.classify({"type": "text/babel"})[0] == "unparseable",
+            "json→%s  无type→%s  module→%s  babel→%s"
+            % (JC.classify({"type": "application/json"})[0],
+               JC.classify({"type": ""}),
+               JC.classify({"type": "module"}),
+               JC.classify({"type": "text/babel"})[0]))
+
+    if not node:
+        r.check("带 JSON 变量块的合法图层必须通过（skipped：没有 node）", True, "skipped")
+        return
+
+    good = JC.run(SAMPLES / "good" / "json-data-block.html", cfg)
+    r.check("带 JSON 变量块的合法外部图层必须通过",
+            good.status == "pass" and "JS_SYNTAX" not in _codes(good),
+            "状态 %s · 发现 %s · 查了 %d 段"
+            % (good.status, sorted(_codes(good)) or "无", len(good.info.get("checked") or [])))
+    r.check("数据块数量进 info（跳过是正确处理，不是缺口）",
+            len(good.info.get("dataBlocks") or []) == 3,
+            "数据块 %d 个，类型 %s"
+            % (len(good.info.get("dataBlocks") or []), good.info.get("dataBlockTypes")))
+
+    mixed = JC.run(SAMPLES / "bad" / "json-block-ok-js-broken.html", cfg)
+    r.check("JSON 块合法但 JS 块真错 → 必须报 JS_SYNTAX",
+            "JS_SYNTAX" in _codes(mixed),
+            "报出 %s" % sorted(_codes(mixed)))
+
+    only = JC.run(SAMPLES / "bad" / "json-only-no-js.html", cfg)
+    r.check("只有数据块没有 JS → 标 skip 而不是 pass",
+            only.status == "skip" and "JS_NO_PARSABLE" in _codes(only),
+            "状态 %s · 发现 %s" % (only.status, sorted(_codes(only))))
 
 
 def _geometry_assertions(r: _Result) -> None:
