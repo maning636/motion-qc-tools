@@ -3,6 +3,8 @@ name: selftest
 on:
   push:
   pull_request:
+  # 手动跑一次（工具改完想立刻验，不用专门推个空提交）
+  workflow_dispatch:
 
 jobs:
   motion-qc:
@@ -38,7 +40,13 @@ jobs:
 
       # 坏样本必须被拦下。预期退出码 1，所以先看输出再判退出码——
       # 直接跑会红，那正是我们要的，但要先确认红的原因是「拦下了」而不是「崩了」。
+      #
+      # ⚠️ 必须显式 shell: bash。windows-latest 的默认 shell 是 pwsh，
+      #    下面这段 set +e / if [ ... ] 是 bash 语法，在 pwsh 里直接 ParserError
+      #    （Missing '(' after 'if'），整条 run 判红 —— 但红的不是「样本没被拦下」，
+      #    是「脚本压根没跑起来」。这类假红最坏：它让人以为工具坏了。
       - name: 坏样本必须被拦下
+        shell: bash
         run: |
           set +e
           motion-qc check samples/bad/ -v
@@ -50,6 +58,7 @@ jobs:
           fi
 
       - name: 好样本 JSON 必须 ok=true
+        shell: bash
         run: |
           motion-qc check samples/good/ -q --json good.json
           python -c "
