@@ -13,6 +13,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+
+    # ⚠️ 整个 job 统一用 bash。
+    #    windows-latest 的默认 shell 是 pwsh，下列步骤里的 bash 语法
+    #    （`set +e` / `if [ ... ]`）在 pwsh 里直接 ParserError，
+    #    整条 run 判红 —— 但红的不是「样本没被拦下」，是「脚本压根没跑起来」。
+    #    这类假红最坏：它让人以为工具坏了。
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -57,16 +67,15 @@ jobs:
             exit 1
           fi
 
+      # 校验脚本是独立文件，不内联 python -c：
+      # 内联的话，同一段多行代码要同时在 bash / pwsh 下成立；而且 print 中文
+      # 在 windows-latest 上按 cp1252 输出会 UnicodeEncodeError ——
+      # assert 其实已经过了，是 print 炸的，判出来却是「工具没跑起来」的假红。
       - name: 好样本 JSON 必须 ok=true
         shell: bash
         run: |
           motion-qc check samples/good/ -q --json good.json
-          python -c "
-          import json,sys
-          d=json.load(open('good.json',encoding='utf-8'))
-          assert d['summary']['ok'], d['summary']
-          print('好样本全过：', d['summary'])
-          "
+          python tools/assert_summary_ok.py good.json
 
       - name: 工具自测
         run: motion-qc selftest

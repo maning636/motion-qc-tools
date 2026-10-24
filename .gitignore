@@ -9,5 +9,7 @@ venv/
 # 自测和检查留下的中间产物
 report.json
 *.report.json
+good.json
+bad.json
 .tmp/
 motion-qc-cache/
